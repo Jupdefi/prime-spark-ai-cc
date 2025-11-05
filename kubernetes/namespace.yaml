@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prime-spark-ai
+  labels:
+    name: prime-spark-ai
+    env: production

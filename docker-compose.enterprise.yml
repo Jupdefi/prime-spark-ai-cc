@@ -1,0 +1,372 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # CORE SERVICES
+  # ============================================
+
+  # Redis for Tier 1 cache
+  redis:
+    image: redis:7-alpine
+    container_name: prime-spark-redis
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory ${REDIS_MAX_MEMORY}
+      --maxmemory-policy ${REDIS_EVICTION_POLICY}
+    ports:
+      - "${REDIS_LOCAL_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # PostgreSQL with TimescaleDB for analytics
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: prime-spark-timescaledb
+    environment:
+      POSTGRES_DB: prime_spark_analytics
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # STREAMING INFRASTRUCTURE
+  # ============================================
+
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: prime-spark-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # Kafka for streaming
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: prime-spark-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Kafka UI for management
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: prime-spark-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "${KAFKA_UI_PORT:-8080}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: prime-spark
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # ============================================
+  # API & APPLICATION
+  # ============================================
+
+  # Prime Spark AI API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prime-spark-api
+    environment:
+      - EDGE_ROUTER_IP=${EDGE_ROUTER_IP}
+      - EDGE_NAS_IP=${EDGE_NAS_IP}
+      - CONTROL_PC_IP=${CONTROL_PC_IP}
+      - SPARK_AGENT_IP=${SPARK_AGENT_IP}
+      - REDIS_LOCAL_PORT=${REDIS_LOCAL_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - POSTGRES_HOST=timescaledb
+      - POSTGRES_PORT=5432
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - OLLAMA_EDGE_URL=${OLLAMA_EDGE_URL}
+      - OLLAMA_CLOUD_URL=${OLLAMA_CLOUD_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "${API_PORT}:8000"
+    volumes:
+      - .:/app
+      - ${NAS_SHARE_PATH}:/mnt/nas
+    depends_on:
+      - redis
+      - timescaledb
+      - kafka
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # DATA PIPELINE (Apache Airflow)
+  # ============================================
+
+  # Airflow PostgreSQL
+  airflow-db:
+    image: postgres:15-alpine
+    container_name: prime-spark-airflow-db
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:-airflow}
+    volumes:
+      - airflow-db-data:/var/lib/postgresql/data
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # Airflow Webserver
+  airflow-webserver:
+    image: apache/airflow:2.7.3
+    container_name: prime-spark-airflow-webserver
+    depends_on:
+      - airflow-db
+      - redis
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+    ports:
+      - "${AIRFLOW_PORT:-8081}:8080"
+    volumes:
+      - ./pipeline/dags:/opt/airflow/dags
+      - ./pipeline/logs:/opt/airflow/logs
+      - ./pipeline/plugins:/opt/airflow/plugins
+    command: webserver
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.7.3
+    container_name: prime-spark-airflow-scheduler
+    depends_on:
+      - airflow-db
+      - redis
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+    volumes:
+      - ./pipeline/dags:/opt/airflow/dags
+      - ./pipeline/logs:/opt/airflow/logs
+      - ./pipeline/plugins:/opt/airflow/plugins
+    command: scheduler
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # Airflow Worker
+  airflow-worker:
+    image: apache/airflow:2.7.3
+    container_name: prime-spark-airflow-worker
+    depends_on:
+      - airflow-db
+      - redis
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+    volumes:
+      - ./pipeline/dags:/opt/airflow/dags
+      - ./pipeline/logs:/opt/airflow/logs
+      - ./pipeline/plugins:/opt/airflow/plugins
+    command: celery worker
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # ============================================
+  # MONITORING & OBSERVABILITY
+  # ============================================
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prime-spark-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ./deployment/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: prime-spark-grafana
+    depends_on:
+      - prometheus
+      - timescaledb
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deployment/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./deployment/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # Node Exporter (system metrics)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: prime-spark-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+
+  # ============================================
+  # API GATEWAY (Optional - Traefik)
+  # ============================================
+
+  traefik:
+    image: traefik:v2.10
+    container_name: prime-spark-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8090:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+    profiles:
+      - gateway
+
+  # ============================================
+  # ML OPS (Optional - MLflow)
+  # ============================================
+
+  mlflow:
+    image: python:3.11-slim
+    container_name: prime-spark-mlflow
+    working_dir: /mlflow
+    command: >
+      bash -c "pip install mlflow psycopg2-binary boto3 &&
+      mlflow server
+      --backend-store-uri postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@timescaledb:5432/mlflow
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000"
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    depends_on:
+      - timescaledb
+    networks:
+      - prime-spark-network
+    restart: unless-stopped
+    profiles:
+      - mlops
+
+volumes:
+  redis-data:
+  timescaledb-data:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
+  airflow-db-data:
+  prometheus-data:
+  grafana-data:
+  mlflow-data:
+
+networks:
+  prime-spark-network:
+    driver: bridge

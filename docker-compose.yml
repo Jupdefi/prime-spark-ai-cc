@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Redis for Tier 1 cache
+  redis:
+    image: redis:7-alpine
+    container_name: prime-spark-redis
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory ${REDIS_MAX_MEMORY}
+      --maxmemory-policy ${REDIS_EVICTION_POLICY}
+    ports:
+      - "${REDIS_LOCAL_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+
+  # Prime Spark AI API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.standard
+    container_name: prime-spark-api
+    environment:
+      - EDGE_ROUTER_IP=${EDGE_ROUTER_IP}
+      - EDGE_NAS_IP=${EDGE_NAS_IP}
+      - CONTROL_PC_IP=${CONTROL_PC_IP}
+      - SPARK_AGENT_IP=${SPARK_AGENT_IP}
+      - PRIMECORE1_IP=${PRIMECORE1_IP}
+      - PRIMECORE4_IP=${PRIMECORE4_IP}
+      - REDIS_LOCAL_PORT=${REDIS_LOCAL_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - OLLAMA_EDGE_URL=${OLLAMA_EDGE_URL}
+      - OLLAMA_CLOUD_URL=${OLLAMA_CLOUD_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    ports:
+      - "${API_PORT}:8000"
+    volumes:
+      - .:/app
+      - ${NAS_SHARE_PATH}:/mnt/nas
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+    # Network mode host for VPN access (optional, use if needed)
+    # network_mode: host
+
+  # Prometheus for monitoring (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prime-spark-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ./deployment/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+    profiles:
+      - monitoring
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: prime-spark-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deployment/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - prime-spark-network
+    profiles:
+      - monitoring
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  prime-spark-network:
+    driver: bridge
