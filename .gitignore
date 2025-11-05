@@ -95,3 +95,7 @@ grafana-data/
 # Backup files
 *.bak
 *.backup
+
+# Rollback backups
+rollback/backups/
+*.tar.gz
