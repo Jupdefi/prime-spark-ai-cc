@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kva-api
+  namespace: prime-spark
+  labels:
+    app: kva-api
+    component: api-gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kva-api
+  template:
+    metadata:
+      labels:
+        app: kva-api
+        component: api-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8002"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: kva-api
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: kva-api
+        image: prime-spark/kva-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8002
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: kva-config
+              key: LOG_LEVEL
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kva-config
+              key: API_PORT
+        - name: REDIS_HOST
+          value: "redis-master"
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kva-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kva-secrets
+              key: REDIS_PASSWORD
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kva-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_DB
+          value: "prime_spark"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kva-secrets
+              key: POSTGRES_PASSWORD
+        - name: CLICKHOUSE_HOST
+          value: "clickhouse"
+        - name: CLICKHOUSE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: kva-config
+              key: CLICKHOUSE_PORT
+        - name: S3_ENDPOINT
+          value: "https://s3.amazonaws.com"
+        - name: S3_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: kva-config
+              key: S3_BUCKET
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kva-secrets
+              key: S3_ACCESS_KEY
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kva-secrets
+              key: S3_SECRET_KEY
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: kva-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        volumeMounts:
+        - name: cache
+          mountPath: /app/cache
+      volumes:
+      - name: cache
+        emptyDir:
+          sizeLimit: 1Gi

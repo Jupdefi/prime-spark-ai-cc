@@ -1,0 +1,304 @@
+# Prime Spark AI - Integration Framework Configuration
+# Main configuration file for edge-cloud integration
+
+# Global Settings
+global:
+  project_name: "prime-spark-ai"
+  environment: "production"  # development, staging, production
+  log_level: "INFO"
+  timezone: "UTC"
+
+# Edge Computing Layer Configuration
+edge:
+  # Inference Manager
+  inference:
+    enable_hailo: true
+    hailo_device_id: 0
+    cpu_fallback: true
+    cache_enabled: true
+    cache_max_entries: 1000
+    default_timeout: 30
+    batch_inference: true
+    batch_size: 32
+
+  # Preprocessing Pipeline
+  preprocessing:
+    default_config:
+      normalize: true
+      compress: true
+      quality: 85
+      batch_size: 32
+    image:
+      resize_dims: [640, 640]
+      augment: false
+    audio:
+      sample_rate: 16000
+      noise_reduction: true
+    sensor:
+      aggregation_window: 10
+
+  # Cache Manager
+  cache:
+    # Memory tier (Redis)
+    memory:
+      host: "localhost"
+      port: 6379
+      db: 0
+      max_memory: 2147483648  # 2GB
+      eviction_policy: "lru"
+      ttl_default: null
+      ttl_inference: 3600  # 1 hour
+      ttl_preprocessing: 1800  # 30 minutes
+
+    # Disk tier
+    disk:
+      path: "/tmp/prime_spark_cache"
+      max_size: 53687091200  # 50GB
+      eviction_policy: "lfu"
+
+    # NAS tier (optional)
+    nas:
+      enabled: false
+      mount_path: "/mnt/nas/cache"
+      max_size: 536870912000  # 500GB
+      eviction_policy: "ttl"
+
+  # Offline Manager
+  offline:
+    cloud_endpoints:
+      - "http://cloud-api:8000/health"
+      - "http://8.8.8.8"
+    check_interval: 30
+    timeout: 5
+    queue_path: "/var/lib/prime-spark/offline_queue"
+    max_queue_size: 10000
+    persist_queue: true
+    sync_batch_size: 50
+    sync_interval: 60
+    retry_backoff: 2
+    enable_local_fallback: true
+    cache_inference_results: true
+    queue_telemetry: true
+
+# Cloud KVA Layer Configuration
+cloud:
+  # KVA Analytics Engine
+  analytics:
+    timescale:
+      host: "localhost"
+      port: 5433
+      database: "timescale"
+      user: "postgres"
+      password: "${POSTGRES_PASSWORD}"
+      pool_min_size: 5
+      pool_max_size: 20
+      command_timeout: 60
+
+    redis:
+      host: "localhost"
+      port: 6379
+      db: 1
+      cache_ttl: 300  # 5 minutes
+
+    default_granularity: "1 minute"
+    max_query_limit: 10000
+
+  # Aggregation Engine
+  aggregation:
+    kafka:
+      bootstrap_servers: "localhost:9092"
+      group_id: "aggregation-engine"
+      auto_offset_reset: "latest"
+      enable_auto_commit: true
+
+    topics:
+      edge_telemetry: "edge.telemetry"
+      edge_inference: "edge.ai.inference"
+      edge_metrics: "edge.metrics"
+      aggregated_data: "cloud.aggregated"
+
+    default_window:
+      type: "tumbling"
+      size_seconds: 60
+
+    batch_size: 100
+
+  # ML Pipeline Manager
+  ml_pipeline:
+    mlflow:
+      tracking_uri: "http://localhost:5001"
+      registry_uri: "http://localhost:5001"
+
+    default_config:
+      auto_deploy: false
+      target_metric: "accuracy"
+      metric_threshold: 0.8
+      deployment_target: "cloud"
+      max_training_time: 3600  # 1 hour
+
+    pipelines:
+      - pipeline_id: "object_detection"
+        pipeline_name: "Edge Object Detection"
+        model_type: "yolov8"
+        stages:
+          - "data_ingestion"
+          - "preprocessing"
+          - "training"
+          - "evaluation"
+          - "deployment"
+
+  # Compute Manager
+  compute:
+    scaling:
+      policy: "target_tracking"
+      min_nodes: 1
+      max_nodes: 10
+      target_cpu_percent: 70.0
+      target_memory_percent: 80.0
+      scale_up_threshold: 80.0
+      scale_down_threshold: 30.0
+      cooldown_seconds: 300
+      check_interval_seconds: 60
+
+    node_defaults:
+      type: "standard"
+      cpu_cores: 4
+      memory_gb: 8.0
+      gpu_count: 0
+
+# Synchronization Engine Configuration
+sync:
+  sync_interval: 300  # 5 minutes
+  batch_size: 100
+  max_retries: 3
+  retry_delay: 60
+  compression_enabled: true
+  encryption_enabled: false
+  conflict_strategy: "latest_wins"  # latest_wins, cloud_wins, edge_wins, merge, manual
+  bandwidth_limit_mbps: null  # No limit
+
+  priority_data_types:
+    - "metrics"
+    - "telemetry"
+
+  storage_path: "/var/lib/prime-spark/sync"
+
+# Orchestration System Configuration
+orchestration:
+  docker:
+    socket: "unix:///var/run/docker.sock"
+
+  deployment:
+    default_strategy: "rolling"  # rolling, blue_green, canary, recreate
+    max_parallel: 2
+    health_check_delay: 30
+    rollback_on_failure: true
+
+  health_checks:
+    default:
+      interval_seconds: 30
+      timeout_seconds: 10
+      retries: 3
+      start_period_seconds: 60
+
+  alerts:
+    - rule_id: "high_cpu"
+      rule_name: "High CPU Usage"
+      condition: "cpu_percent > 85"
+      severity: "warning"
+      notification_channels: ["log", "email"]
+      cooldown_seconds: 300
+      enabled: true
+
+    - rule_id: "service_down"
+      rule_name: "Service Down"
+      condition: "active_services < 5"
+      severity: "critical"
+      notification_channels: ["log", "email", "slack"]
+      cooldown_seconds: 60
+      enabled: true
+
+    - rule_id: "deployment_failure"
+      rule_name: "Deployment Failure"
+      condition: "deployment_success_rate < 0.9"
+      severity: "critical"
+      notification_channels: ["log", "email"]
+      cooldown_seconds: 300
+      enabled: true
+
+# Network Configuration
+network:
+  vpn:
+    enabled: true
+    type: "wireguard"
+    subnet: "10.8.0.0/24"
+    edge_ip: "10.8.0.2"
+    cloud_ip: "10.8.0.1"
+    port: 51820
+
+  api:
+    edge_port: 8000
+    cloud_port: 8000
+    timeout: 30
+    max_connections: 100
+
+# Security Configuration
+security:
+  authentication:
+    type: "jwt"
+    secret_key: "${JWT_SECRET_KEY}"
+    algorithm: "HS256"
+    token_expire_minutes: 60
+
+  tls:
+    enabled: false  # Enable in production
+    cert_path: "/etc/prime-spark/certs/cert.pem"
+    key_path: "/etc/prime-spark/certs/key.pem"
+
+  cors:
+    enabled: true
+    allow_origins:
+      - "http://localhost:3000"
+      - "http://localhost:8000"
+    allow_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+    allow_credentials: true
+
+# Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    scrape_interval: 15
+
+  grafana:
+    enabled: true
+    port: 3002
+    admin_user: "admin"
+    admin_password: "${GRAFANA_PASSWORD}"
+
+  metrics:
+    collect_interval: 10
+    retention_days: 30
+
+  logging:
+    level: "INFO"
+    format: "json"
+    output: "stdout"
+    file_path: "/var/log/prime-spark/app.log"
+    rotation:
+      max_size_mb: 100
+      max_files: 10
+
+# Feature Flags
+features:
+  edge_inference: true
+  cloud_analytics: true
+  real_time_sync: true
+  ml_pipeline: true
+  auto_scaling: true
+  health_monitoring: true
+  alerting: true

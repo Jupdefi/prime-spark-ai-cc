@@ -1,0 +1,454 @@
+# Production Environment Configuration
+# Hybrid Cloud Production Deployment
+
+environment: production
+region: multi-region
+domain: prime-spark.ai
+cloud_provider: aws
+
+# Infrastructure Configuration
+infrastructure:
+  provider: aws
+  primary_region: us-east-1
+  secondary_region: us-west-2
+
+  vpc_primary:
+    cidr: 10.0.0.0/16
+    availability_zones:
+      - us-east-1a
+      - us-east-1b
+      - us-east-1c
+
+  vpc_secondary:
+    cidr: 10.2.0.0/16
+    availability_zones:
+      - us-west-2a
+      - us-west-2b
+      - us-west-2c
+
+  networking:
+    public_subnets:
+      - 10.0.1.0/24
+      - 10.0.2.0/24
+      - 10.0.3.0/24
+    private_subnets:
+      - 10.0.10.0/24
+      - 10.0.11.0/24
+      - 10.0.12.0/24
+    database_subnets:
+      - 10.0.20.0/24
+      - 10.0.21.0/24
+      - 10.0.22.0/24
+    transit_gateway: true
+    direct_connect: true
+    vpn_redundancy: true
+
+# Compute Resources
+compute:
+  kubernetes:
+    version: "1.28"
+    cluster_name: prime-spark-prod
+    control_plane:
+      high_availability: true
+      zones: 3
+
+    node_groups:
+      - name: general-purpose
+        instance_type: m6i.2xlarge
+        min_nodes: 4
+        max_nodes: 12
+        desired_nodes: 6
+        spot_enabled: false
+
+      - name: ai-inference
+        instance_type: g5.2xlarge
+        min_nodes: 2
+        max_nodes: 8
+        desired_nodes: 3
+        gpu_enabled: true
+
+      - name: memory-optimized
+        instance_type: r6i.2xlarge
+        min_nodes: 2
+        max_nodes: 6
+        desired_nodes: 2
+
+      - name: spot-batch
+        instance_type: c6i.4xlarge
+        min_nodes: 0
+        max_nodes: 10
+        desired_nodes: 0
+        spot_enabled: true
+
+  edge_nodes:
+    raspberry_pi:
+      count: 10
+      model: pi5
+      accelerator: hailo-8
+      vpn_enabled: true
+
+    gateway:
+      instance_type: c6i.xlarge
+      count: 3
+      load_balancer:
+        type: application
+        ssl_policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+        cross_zone: true
+
+# Storage Configuration
+storage:
+  rds_postgresql:
+    instance_class: db.r6g.2xlarge
+    engine_version: "15.4"
+    allocated_storage: 500
+    max_allocated_storage: 2000
+    multi_az: true
+    read_replicas: 2
+    backup_retention: 30
+    performance_insights: true
+    deletion_protection: true
+
+  elasticache_redis:
+    node_type: cache.r6g.2xlarge
+    num_cache_clusters: 3
+    engine_version: "7.0"
+    multi_az: true
+    automatic_failover: true
+    snapshot_retention: 7
+
+  documentdb:
+    instance_class: db.r6g.xlarge
+    num_instances: 3
+    backup_retention: 30
+
+  s3:
+    primary_bucket: prime-spark-prod-data
+    backup_bucket: prime-spark-prod-backup
+    versioning: true
+    mfa_delete: true
+    encryption: aws:kms
+    replication:
+      enabled: true
+      destination_region: us-west-2
+    lifecycle_rules:
+      - id: intelligent-tiering
+        enabled: true
+        transitions:
+          - days: 90
+            storage_class: INTELLIGENT_TIERING
+
+  efs:
+    performance_mode: maxIO
+    throughput_mode: provisioned
+    provisioned_throughput_mibps: 100
+    encrypted: true
+    lifecycle_policy: AFTER_30_DAYS
+    backup_policy: ENABLED
+
+# Application Configuration
+application:
+  kva_api:
+    replicas: 10
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "8Gi"
+
+    autoscaling:
+      enabled: true
+      min_replicas: 6
+      max_replicas: 20
+      metrics:
+        - type: cpu
+          target: 65
+        - type: memory
+          target: 75
+        - type: custom
+          name: requests_per_second
+          target: 1000
+
+    pod_disruption_budget:
+      min_available: 4
+
+    health_checks:
+      liveness:
+        initial_delay: 30
+        period: 10
+        timeout: 5
+        failure_threshold: 3
+      readiness:
+        initial_delay: 10
+        period: 5
+        timeout: 3
+        failure_threshold: 2
+
+  edge_services:
+    replicas: 6
+    resources:
+      requests:
+        cpu: "2000m"
+        memory: "4Gi"
+      limits:
+        cpu: "8000m"
+        memory: "16Gi"
+
+# Monitoring and Observability
+monitoring:
+  prometheus:
+    retention: 90d
+    storage_size: 500Gi
+    high_availability: true
+    replicas: 2
+    scrape_interval: 15s
+    remote_write:
+      - url: https://prometheus-prod.prime-spark.ai/api/v1/write
+
+  grafana:
+    replicas: 2
+    persistence: true
+    storage_size: 50Gi
+    high_availability: true
+    sso_enabled: true
+    plugins:
+      - grafana-piechart-panel
+      - grafana-worldmap-panel
+      - grafana-clock-panel
+
+  jaeger:
+    enabled: true
+    sampling_rate: 0.01  # 1% sampling for production
+    storage_type: elasticsearch
+    es_nodes: 3
+    retention_days: 14
+
+  loki:
+    enabled: true
+    retention_period: 90d
+    storage_size: 200Gi
+    replicas: 3
+
+  cloudwatch:
+    enabled: true
+    log_retention_days: 90
+    detailed_monitoring: true
+
+  x-ray:
+    enabled: true
+    sampling_rate: 0.01
+
+  datadog:
+    enabled: true
+    apm_enabled: true
+    log_collection: true
+
+  newrelic:
+    enabled: true
+    distributed_tracing: true
+
+# Security Configuration
+security:
+  tls:
+    enabled: true
+    cert_manager: true
+    issuer: letsencrypt-prod
+    min_version: TLSv1.3
+    cipher_suites: STRONG
+
+  waf:
+    enabled: true
+    provider: aws_waf_v2
+    rules:
+      - sql_injection
+      - xss
+      - rate_limiting
+      - geo_blocking
+      - bot_protection
+
+  authentication:
+    oauth2_provider: okta
+    jwt_secret_name: prod/jwt-secret
+    token_expiry: 8h
+    mfa_enabled: true
+    session_timeout: 30m
+
+  authorization:
+    rbac_enabled: true
+    pod_security_policy: restricted
+
+  network_policies:
+    enabled: true
+    default_deny: true
+    egress_control: true
+
+  secrets_manager:
+    provider: aws_secrets_manager
+    kms_key_id: alias/prime-spark-prod
+    rotation_enabled: true
+    rotation_days: 30
+
+  vulnerability_scanning:
+    enabled: true
+    scanner: trivy
+    fail_on_critical: true
+
+  penetration_testing:
+    schedule: quarterly
+    last_test: 2025-01-15
+
+# CI/CD Configuration
+cicd:
+  enabled: true
+  pipeline_trigger: on_tag
+  deployment_strategy: canary
+  canary_steps:
+    - weight: 10
+      duration: 10m
+    - weight: 25
+      duration: 15m
+    - weight: 50
+      duration: 30m
+    - weight: 100
+
+  rollback:
+    enabled: true
+    automatic: true
+    failure_threshold: 5
+
+  approval:
+    required: true
+    approvers:
+      - prod-admin
+      - sre-lead
+      - security-lead
+    minimum_approvals: 2
+
+  testing:
+    smoke_tests: true
+    integration_tests: true
+    performance_tests: true
+    security_scans: true
+
+# Feature Flags
+features:
+  ml_pipelines: true
+  real_time_analytics: true
+  a_b_testing: true
+  auto_scaling: true
+  distributed_tracing: true
+  canary_deployments: true
+  circuit_breakers: true
+  rate_limiting: true
+
+# Backup and Recovery
+backup:
+  enabled: true
+  schedule: "0 0,12 * * *"  # Twice daily
+  retention_days: 90
+  cross_region_backup: true
+  backup_regions:
+    - us-west-2
+    - eu-west-1
+  snapshot_lifecycle: 30d
+  backup_vault: prime-spark-prod-vault
+
+# Disaster Recovery
+disaster_recovery:
+  rto: 1h  # Recovery Time Objective
+  rpo: 15m  # Recovery Point Objective
+  failover_region: us-west-2
+  failover_enabled: true
+  automated_failover: true
+  dr_drills_schedule: monthly
+  runbook: https://docs.prime-spark.ai/dr-runbook
+
+# High Availability
+high_availability:
+  multi_az: true
+  multi_region: true
+  load_balancing:
+    cross_region: true
+    health_checks: enabled
+  database_failover: automatic
+  cache_failover: automatic
+  dns_failover: route53_health_checks
+
+# Performance
+performance:
+  cdn:
+    provider: cloudfront
+    enabled: true
+    edge_locations: all
+    price_class: PriceClass_All
+
+  caching:
+    strategy: aggressive
+    ttl: 3600
+    edge_caching: true
+
+  compression:
+    enabled: true
+    algorithms:
+      - gzip
+      - brotli
+
+# Cost Management
+cost:
+  budget_limit: 5000  # USD per month
+  reserved_instances: true
+  savings_plans: true
+  spot_instances: true  # For non-critical workloads
+
+  alerts:
+    - threshold: 70
+      notification: finance@prime-spark.ai
+    - threshold: 85
+      notification: cto@prime-spark.ai
+    - threshold: 95
+      notification: emergency@prime-spark.ai
+
+  cost_optimization:
+    rightsizing: enabled
+    unused_resources_cleanup: enabled
+    schedule_based_scaling: enabled
+
+# Compliance and Governance
+compliance:
+  data_residency: multi-region
+  encryption_at_rest: true
+  encryption_in_transit: true
+  audit_logging: comprehensive
+  gdpr_compliant: true
+  hipaa_compliant: true
+  soc2_compliant: true
+  iso27001_compliant: true
+
+  certifications:
+    - SOC 2 Type II
+    - ISO 27001
+    - PCI DSS Level 1
+
+# SLA and SLO
+sla:
+  uptime: 99.95
+  response_time_p95: 200ms
+  response_time_p99: 500ms
+  error_rate: 0.1
+
+slo:
+  availability: 99.99
+  latency_p50: 50ms
+  latency_p95: 150ms
+  latency_p99: 300ms
+
+# Incident Response
+incident_response:
+  on_call_rotation: pagerduty
+  escalation_policy: https://docs.prime-spark.ai/escalation
+  incident_channels:
+    - slack: #incidents
+    - email: incidents@prime-spark.ai
+  post_mortem_required: true
+  blameless_culture: true

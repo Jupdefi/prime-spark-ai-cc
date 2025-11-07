@@ -1,0 +1,153 @@
+# RDS Module Variables
+
+variable "project_name" {
+  description = "Project name used for resource naming"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (dev, staging, production)"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "VPC ID where RDS will be created"
+  type        = string
+}
+
+variable "database_subnet_ids" {
+  description = "List of subnet IDs for RDS"
+  type        = list(string)
+}
+
+variable "allowed_cidr_blocks" {
+  description = "CIDR blocks allowed to access the database"
+  type        = list(string)
+}
+
+variable "engine_version" {
+  description = "PostgreSQL engine version"
+  type        = string
+  default     = "15.4"
+}
+
+variable "engine_version_major" {
+  description = "Major version of PostgreSQL (for parameter group)"
+  type        = string
+  default     = "15"
+}
+
+variable "instance_class" {
+  description = "RDS instance class"
+  type        = string
+}
+
+variable "allocated_storage" {
+  description = "Allocated storage in GB"
+  type        = number
+}
+
+variable "max_allocated_storage" {
+  description = "Maximum storage for autoscaling in GB"
+  type        = number
+}
+
+variable "database_name" {
+  description = "Name of the default database"
+  type        = string
+}
+
+variable "master_username" {
+  description = "Master username for the database"
+  type        = string
+  sensitive   = true
+}
+
+variable "master_password" {
+  description = "Master password for the database"
+  type        = string
+  sensitive   = true
+}
+
+variable "kms_key_id" {
+  description = "KMS key ID for encryption"
+  type        = string
+}
+
+variable "multi_az" {
+  description = "Enable Multi-AZ deployment"
+  type        = bool
+  default     = true
+}
+
+variable "backup_retention_period" {
+  description = "Backup retention period in days"
+  type        = number
+  default     = 7
+}
+
+variable "backup_window" {
+  description = "Preferred backup window"
+  type        = string
+  default     = "03:00-04:00"
+}
+
+variable "maintenance_window" {
+  description = "Preferred maintenance window"
+  type        = string
+  default     = "mon:04:00-mon:05:00"
+}
+
+variable "deletion_protection" {
+  description = "Enable deletion protection"
+  type        = bool
+  default     = true
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot on deletion"
+  type        = bool
+  default     = false
+}
+
+variable "performance_insights_enabled" {
+  description = "Enable Performance Insights"
+  type        = bool
+  default     = true
+}
+
+variable "performance_insights_retention" {
+  description = "Performance Insights retention period in days"
+  type        = number
+  default     = 7
+}
+
+variable "read_replica_count" {
+  description = "Number of read replicas to create"
+  type        = number
+  default     = 0
+}
+
+variable "replica_instance_class" {
+  description = "Instance class for read replicas (defaults to main instance class)"
+  type        = string
+  default     = ""
+}
+
+variable "enable_cloudwatch_alarms" {
+  description = "Enable CloudWatch alarms"
+  type        = bool
+  default     = true
+}
+
+variable "alarm_actions" {
+  description = "List of ARNs to notify when alarms trigger"
+  type        = list(string)
+  default     = []
+}
+
+variable "tags" {
+  description = "Additional tags for resources"
+  type        = map(string)
+  default     = {}
+}

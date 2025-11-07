@@ -1,0 +1,106 @@
+# Prime Spark Voice Command Hub - Docker Compose
+
+version: '3.8'
+
+services:
+  voice-hub:
+    container_name: prime-spark-voice-hub
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    devices:
+      # Grant access to audio devices
+      - /dev/snd:/dev/snd
+    volumes:
+      # Mount ALSA configuration
+      - /etc/asound.conf:/etc/asound.conf:ro
+      - voice-recordings:/app/recordings
+    environment:
+      # Voice Hub Configuration
+      - HUB_API_KEY=${HUB_API_KEY:-prime-spark-voice-key}
+
+      # Whisper Configuration
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
+      - WHISPER_LANGUAGE=en
+
+      # Piper TTS Configuration
+      - PIPER_MODEL=en_US-lessac-medium
+      - PIPER_VOICE_PATH=/opt/piper/voices
+
+      # Audio Configuration
+      - SAMPLE_RATE=16000
+      - CHUNK_SIZE=1024
+      - CHANNELS=1
+      - RESPEAKER_INDEX=-1  # Auto-detect
+
+      # Wake Words
+      - WAKE_WORDS=hey spark,hey prime
+
+      # Command Configuration
+      - MAX_AUDIO_DURATION=30
+      - COMMAND_TIMEOUT=5
+      - CONFIDENCE_THRESHOLD=0.6
+
+      # Prime Spark Agents
+      - PULSE_API_URL=http://host.docker.internal:8001
+      - AI_BRIDGE_API_URL=http://host.docker.internal:8002
+      - MOBILE_API_URL=http://host.docker.internal:8003
+      - N8N_HUB_API_URL=http://host.docker.internal:8004
+
+      # NLU Configuration
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - NLU_MODEL=llama3.2:latest
+
+      # Redis Configuration
+      - REDIS_HOST=voice-redis
+      - REDIS_PORT=6379
+      - REDIS_DB=4
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      # Cache Configuration
+      - CACHE_TTL=3600
+      - CONVERSATION_TTL=600
+
+      # Pulse Audio (if using)
+      - PULSE_SERVER=unix:/run/user/1000/pulse/native
+
+    depends_on:
+      - voice-redis
+    networks:
+      - prime-spark
+    restart: unless-stopped
+    privileged: true  # Needed for audio device access
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  voice-redis:
+    container_name: prime-spark-voice-redis
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - voice-redis-data:/data
+    networks:
+      - prime-spark
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  voice-redis-data:
+    driver: local
+  voice-recordings:
+    driver: local
+
+networks:
+  prime-spark:
+    driver: bridge

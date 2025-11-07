@@ -1,0 +1,221 @@
+# Staging Environment Configuration
+# Cloud Sandbox for Testing and QA
+
+environment: staging
+region: us-east-1
+domain: staging.prime-spark.ai
+cloud_provider: aws
+
+# Infrastructure Configuration
+infrastructure:
+  provider: aws
+  vpc_cidr: 10.1.0.0/16
+  availability_zones:
+    - us-east-1a
+    - us-east-1b
+
+  networking:
+    public_subnets:
+      - 10.1.1.0/24
+      - 10.1.2.0/24
+    private_subnets:
+      - 10.1.10.0/24
+      - 10.1.11.0/24
+    nat_gateway: true
+    vpn_endpoint: true
+
+# Compute Resources
+compute:
+  kubernetes:
+    version: "1.28"
+    cluster_name: prime-spark-staging
+    node_groups:
+      - name: general
+        instance_type: t3.xlarge
+        min_nodes: 2
+        max_nodes: 4
+        desired_nodes: 2
+      - name: ai-workloads
+        instance_type: g4dn.xlarge
+        min_nodes: 1
+        max_nodes: 2
+        desired_nodes: 1
+
+  edge_gateway:
+    instance_type: t3.medium
+    count: 2
+    load_balancer: true
+
+# Storage Configuration
+storage:
+  rds_postgresql:
+    instance_class: db.t3.large
+    engine_version: "15.4"
+    allocated_storage: 100
+    multi_az: true
+    backup_retention: 7
+
+  elasticache_redis:
+    node_type: cache.r6g.large
+    num_cache_nodes: 2
+    engine_version: "7.0"
+    parameter_group: default.redis7
+
+  s3:
+    bucket_name: prime-spark-staging-data
+    versioning: true
+    encryption: AES256
+    lifecycle_rules:
+      - id: transition-to-ia
+        enabled: true
+        transitions:
+          - days: 30
+            storage_class: STANDARD_IA
+
+  efs:
+    performance_mode: generalPurpose
+    throughput_mode: bursting
+    encrypted: true
+
+# Application Configuration
+application:
+  kva_api:
+    replicas: 3
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+    autoscaling:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 6
+      target_cpu_percent: 70
+
+  edge_services:
+    replicas: 2
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "8Gi"
+
+# Monitoring and Observability
+monitoring:
+  prometheus:
+    retention: 30d
+    storage_size: 100Gi
+    scrape_interval: 30s
+
+  grafana:
+    persistence: true
+    storage_size: 10Gi
+    plugins:
+      - grafana-piechart-panel
+      - grafana-clock-panel
+
+  jaeger:
+    enabled: true
+    sampling_rate: 0.1
+    storage_type: elasticsearch
+
+  loki:
+    enabled: true
+    retention_period: 30d
+    storage_size: 50Gi
+
+  cloudwatch:
+    enabled: true
+    log_retention_days: 30
+
+  x-ray:
+    enabled: true
+    sampling_rate: 0.05
+
+# Security Configuration
+security:
+  tls:
+    enabled: true
+    cert_manager: true
+    issuer: letsencrypt-staging
+
+  waf:
+    enabled: true
+    rules:
+      - sql_injection
+      - xss
+      - rate_limiting
+
+  authentication:
+    oauth2_provider: cognito
+    jwt_secret_name: staging/jwt-secret
+    token_expiry: 12h
+    mfa_enabled: false
+
+  network_policies:
+    enabled: true
+    default_deny: true
+
+  secrets_manager:
+    provider: aws_secrets_manager
+    rotation_enabled: true
+    rotation_days: 90
+
+# CI/CD Configuration
+cicd:
+  enabled: true
+  pipeline_trigger: on_merge
+  deployment_strategy: blue_green
+  rollback_enabled: true
+  smoke_tests: true
+
+  approval:
+    required: true
+    approvers:
+      - staging-admin
+      - qa-lead
+
+# Feature Flags
+features:
+  ml_pipelines: true
+  real_time_analytics: true
+  a_b_testing: true
+  auto_scaling: true
+  distributed_tracing: true
+  canary_deployments: true
+
+# Backup and Recovery
+backup:
+  enabled: true
+  schedule: "0 1 * * *"  # Daily at 1 AM UTC
+  retention_days: 30
+  cross_region_backup: false
+  snapshot_lifecycle: 7d
+
+# Disaster Recovery
+disaster_recovery:
+  rto: 4h  # Recovery Time Objective
+  rpo: 1h  # Recovery Point Objective
+  backup_region: us-west-2
+  failover_enabled: false
+
+# Cost Management
+cost:
+  budget_limit: 500  # USD per month
+  alerts:
+    - threshold: 80
+      notification: staging-admin@prime-spark.ai
+    - threshold: 90
+      notification: ops-team@prime-spark.ai
+
+# Compliance and Governance
+compliance:
+  data_residency: us
+  encryption_at_rest: true
+  encryption_in_transit: true
+  audit_logging: true
+  gdpr_compliant: true

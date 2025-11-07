@@ -1,0 +1,456 @@
+{
+  "dashboard": {
+    "title": "Prime Spark AI - Integration Framework",
+    "tags": ["prime-spark", "integration", "edge-cloud"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "Services Up"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Edge Inference Performance",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(edge_inference_total[5m])",
+            "legendFormat": "Inferences/sec"
+          },
+          {
+            "expr": "edge_inference_latency_ms",
+            "legendFormat": "Latency (ms)"
+          }
+        ],
+        "yaxes": [
+          {"label": "Requests/s", "show": true},
+          {"label": "Latency (ms)", "show": true}
+        ],
+        "legend": {"show": true, "alignAsTable": true, "avg": true, "max": true}
+      },
+      {
+        "id": 3,
+        "title": "Cache Hit Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(edge_cache_hits[5m]) / (rate(edge_cache_hits[5m]) + rate(edge_cache_misses[5m]))",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "yaxes": [
+          {"label": "Hit Rate", "show": true, "min": 0, "max": 1, "format": "percentunit"}
+        ],
+        "legend": {"show": true}
+      },
+      {
+        "id": 4,
+        "title": "Hailo vs CPU Inference",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "edge_hailo_inferences_total",
+            "legendFormat": "Hailo-8"
+          },
+          {
+            "expr": "edge_cpu_inferences_total",
+            "legendFormat": "CPU"
+          }
+        ],
+        "options": {
+          "displayLabels": ["name", "percent"],
+          "legend": {"show": true, "placement": "bottom"}
+        }
+      },
+      {
+        "id": 5,
+        "title": "Preprocessing Throughput",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+        "targets": [
+          {
+            "expr": "rate(edge_preprocessing_total[5m])",
+            "legendFormat": "{{data_type}}"
+          }
+        ],
+        "yaxes": [
+          {"label": "Items/s", "show": true}
+        ],
+        "legend": {"show": true, "alignAsTable": true}
+      },
+      {
+        "id": 6,
+        "title": "Offline Queue Size",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+        "targets": [
+          {
+            "expr": "edge_offline_queue_size",
+            "legendFormat": "Queue Size"
+          }
+        ],
+        "yaxes": [
+          {"label": "Operations", "show": true}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [1000], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "High Offline Queue",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 7,
+        "title": "Cloud Analytics Queries",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "rate(cloud_analytics_queries_total[5m])",
+            "legendFormat": "Queries/s"
+          },
+          {
+            "expr": "cloud_analytics_query_latency_ms",
+            "legendFormat": "Latency (ms)"
+          }
+        ],
+        "yaxes": [
+          {"label": "Queries/s", "show": true},
+          {"label": "Latency (ms)", "show": true}
+        ],
+        "legend": {"show": true, "alignAsTable": true}
+      },
+      {
+        "id": 8,
+        "title": "Kafka Aggregation Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+        "targets": [
+          {
+            "expr": "rate(cloud_aggregation_events_total[5m])",
+            "legendFormat": "Events/s"
+          },
+          {
+            "expr": "rate(cloud_aggregation_windows_completed[5m])",
+            "legendFormat": "Windows/s"
+          }
+        ],
+        "yaxes": [
+          {"label": "Rate", "show": true}
+        ],
+        "legend": {"show": true}
+      },
+      {
+        "id": 9,
+        "title": "ML Pipeline Status",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "cloud_ml_pipeline_runs_total",
+            "legendFormat": "Total Runs",
+            "instant": true
+          },
+          {
+            "expr": "cloud_ml_pipeline_success_rate",
+            "legendFormat": "Success Rate",
+            "instant": true
+          },
+          {
+            "expr": "cloud_ml_models_deployed_total",
+            "legendFormat": "Models Deployed",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Compute Cluster Status",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 28},
+        "targets": [
+          {
+            "expr": "cloud_compute_active_nodes",
+            "legendFormat": "Active Nodes"
+          },
+          {
+            "expr": "cloud_compute_active_workloads",
+            "legendFormat": "Active Workloads"
+          },
+          {
+            "expr": "cloud_compute_total_cpu_cores",
+            "legendFormat": "Total CPU Cores"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 11,
+        "title": "Auto-Scaling Events",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 28},
+        "targets": [
+          {
+            "expr": "cloud_compute_scale_events_total",
+            "legendFormat": "Scale Events"
+          },
+          {
+            "expr": "cloud_compute_active_nodes",
+            "legendFormat": "Node Count"
+          }
+        ],
+        "yaxes": [
+          {"label": "Count", "show": true}
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Sync Operations",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "rate(sync_operations_total[5m])",
+            "legendFormat": "{{direction}}"
+          }
+        ],
+        "yaxes": [
+          {"label": "Ops/s", "show": true}
+        ],
+        "legend": {"show": true}
+      },
+      {
+        "id": 13,
+        "title": "Sync Conflicts",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+        "targets": [
+          {
+            "expr": "sync_conflicts_detected_total",
+            "legendFormat": "Detected"
+          },
+          {
+            "expr": "sync_conflicts_resolved_total",
+            "legendFormat": "Resolved"
+          }
+        ],
+        "yaxes": [
+          {"label": "Conflicts", "show": true}
+        ],
+        "legend": {"show": true}
+      },
+      {
+        "id": 14,
+        "title": "Bandwidth Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 44},
+        "targets": [
+          {
+            "expr": "rate(sync_bytes_transferred[5m]) / 1024 / 1024",
+            "legendFormat": "MB/s"
+          }
+        ],
+        "yaxes": [
+          {"label": "MB/s", "show": true}
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Service Health",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 44},
+        "targets": [
+          {
+            "expr": "orchestrator_healthy_services",
+            "legendFormat": "Healthy"
+          },
+          {
+            "expr": "orchestrator_unhealthy_services",
+            "legendFormat": "Unhealthy"
+          },
+          {
+            "expr": "orchestrator_degraded_services",
+            "legendFormat": "Degraded"
+          }
+        ],
+        "yaxes": [
+          {"label": "Services", "show": true}
+        ],
+        "legend": {"show": true}
+      },
+      {
+        "id": 16,
+        "title": "Deployment Success Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 52},
+        "targets": [
+          {
+            "expr": "orchestrator_deployment_success_rate",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.8, "color": "yellow"},
+                {"value": 0.95, "color": "green"}
+              ]
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 17,
+        "title": "Alert Summary",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 16, "x": 8, "y": 52},
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "instant": true,
+            "legendFormat": ""
+          }
+        ],
+        "options": {
+          "showHeader": true
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {"alertname": 0, "severity": 1, "instance": 2},
+              "renameByName": {
+                "alertname": "Alert",
+                "severity": "Severity",
+                "instance": "Instance"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "System Resource Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 60},
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU % - {{instance}}"
+          },
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+            "legendFormat": "Memory % - {{instance}}"
+          }
+        ],
+        "yaxes": [
+          {"label": "Usage %", "show": true, "min": 0, "max": 100}
+        ],
+        "legend": {"show": true, "alignAsTable": true, "avg": true, "max": true}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "label": "Instance",
+          "query": "label_values(up, instance)",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true
+        },
+        {
+          "name": "environment",
+          "type": "query",
+          "label": "Environment",
+          "query": "label_values(up, environment)",
+          "refresh": 1,
+          "multi": false,
+          "includeAll": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "orchestrator_deployment_started",
+          "tagKeys": "deployment_id",
+          "textFormat": "Deployment: {{deployment_id}}",
+          "titleFormat": "Deployment Started"
+        }
+      ]
+    }
+  },
+  "overwrite": true,
+  "inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "value": "Prometheus"
+    }
+  ]
+}

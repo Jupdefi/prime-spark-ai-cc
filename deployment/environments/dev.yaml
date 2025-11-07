@@ -1,0 +1,142 @@
+# Development Environment Configuration
+# Local Raspberry Pi 5 Development Setup
+
+environment: development
+region: local
+domain: dev.prime-spark.local
+
+# Infrastructure Configuration
+infrastructure:
+  provider: local
+  location: raspberry-pi-5
+  network:
+    subnet: 192.168.1.0/24
+    gateway: 192.168.1.1
+    dns_servers:
+      - 8.8.8.8
+      - 1.1.1.1
+
+# Compute Resources
+compute:
+  edge_nodes:
+    - name: pi5-dev-01
+      ip: 192.168.1.100
+      cpu_cores: 4
+      memory_gb: 8
+      storage_gb: 256
+      accelerator: hailo-8
+
+  containers:
+    docker_host: unix:///var/run/docker.sock
+    registry: localhost:5000
+    resources:
+      cpu_limit: "2.0"
+      memory_limit: 4G
+
+# Storage Configuration
+storage:
+  redis:
+    host: localhost
+    port: 6380
+    max_memory: 2G
+    persistence: yes
+
+  postgresql:
+    host: localhost
+    port: 5434
+    database: prime_spark_dev
+    max_connections: 50
+
+  clickhouse:
+    host: localhost
+    http_port: 8123
+    native_port: 9000
+    database: prime_spark_dev
+
+  minio:
+    endpoint: localhost:9002
+    console: localhost:9003
+    bucket: prime-spark-dev
+    region: us-east-1
+
+# Application Configuration
+application:
+  kva_api:
+    port: 8002
+    workers: 2
+    debug: true
+    log_level: DEBUG
+    auto_reload: true
+
+  edge_services:
+    inference:
+      enabled: true
+      batch_size: 1
+      model_cache_size: 1G
+
+    preprocessing:
+      enabled: true
+      workers: 2
+
+    cache:
+      memory_size: 512M
+      disk_size: 10G
+
+# Monitoring and Observability
+monitoring:
+  prometheus:
+    port: 9091
+    scrape_interval: 15s
+    retention: 7d
+
+  grafana:
+    port: 3003
+    admin_user: admin
+    admin_password: dev123
+
+  jaeger:
+    enabled: true
+    agent_port: 6831
+    collector_port: 14268
+    ui_port: 16686
+
+  loki:
+    enabled: true
+    port: 3100
+
+# Security Configuration
+security:
+  tls:
+    enabled: false
+    cert_path: /etc/ssl/certs
+
+  authentication:
+    jwt_secret: dev-secret-key-change-in-production
+    token_expiry: 24h
+
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+
+# Feature Flags
+features:
+  ml_pipelines: true
+  real_time_analytics: true
+  a_b_testing: true
+  auto_scaling: false
+  distributed_tracing: true
+
+# Backup and Recovery
+backup:
+  enabled: false
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention_days: 7
+  destination: /var/backups/prime-spark
+
+# Development Tools
+development:
+  hot_reload: true
+  debug_mode: true
+  profiling: true
+  test_data_seed: true
+  mock_external_services: true

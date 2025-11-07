@@ -1,0 +1,129 @@
+# Autonomous Fine-Tuning Agent Configuration
+
+# Agent Settings
+agent:
+  name: "Prime Spark Autonomous Agent"
+  version: "1.0.0"
+  storage_path: "/var/lib/prime-spark/agent"
+
+# Monitoring Configuration
+monitoring:
+  interval_seconds: 30  # Collect metrics every 30s
+  analysis_interval_seconds: 60  # Analyze every minute
+  optimization_interval_seconds: 300  # Optimize every 5 minutes
+
+# Action Thresholds
+thresholds:
+  min_improvement_threshold: 0.05  # Minimum 5% improvement required
+  max_risk_threshold: 0.7  # Maximum acceptable risk level
+  max_concurrent_actions: 3  # Maximum parallel actions
+
+# Safety Settings
+safety:
+  enable_automatic_actions: true  # Allow autonomous actions
+  require_approval_for_critical: true  # Require approval for critical actions
+  rollback_on_failure: true  # Auto-rollback failed actions
+  simulation_mode: false  # Set to true for testing without real changes
+
+# Learning Settings
+learning:
+  enable_learning: true  # Learn from past actions
+  learning_rate: 0.1  # How quickly to adapt
+  exploration_rate: 0.2  # Balance exploration vs exploitation
+
+# Optimization Goals
+goals:
+  - metric_name: "inference_latency_ms"
+    target_value: 75.0
+    direction: "minimize"
+    weight: 1.0
+
+  - metric_name: "cache_hit_rate"
+    target_value: 0.90
+    direction: "maximize"
+    weight: 0.8
+
+  - metric_name: "cpu_usage"
+    target_value: 70.0
+    direction: "minimize"
+    weight: 0.7
+
+  - metric_name: "service_health_score"
+    target_value: 0.95
+    direction: "maximize"
+    weight: 1.0
+
+  - metric_name: "deployment_success_rate"
+    target_value: 0.98
+    direction: "maximize"
+    weight: 0.9
+
+# Performance Optimizer Configuration
+performance:
+  cpu_scale_threshold: 85  # % CPU to trigger scaling
+  memory_scale_threshold: 85  # % Memory to trigger action
+  latency_target_ms: 75  # Target inference latency
+  cache_hit_target: 0.85  # Target cache hit rate
+  network_latency_target_ms: 25  # Target network latency
+
+# Model Manager Configuration
+models:
+  auto_deploy_updates: false  # Manually approve model updates
+  benchmark_new_models: true  # Always benchmark before deployment
+  ab_test_duration_seconds: 3600  # 1 hour A/B tests
+  ab_test_min_improvement: 0.10  # 10% improvement required
+  model_update_check_interval: 86400  # Check daily
+
+# Pipeline Optimizer Configuration
+pipeline:
+  kafka_lag_threshold: 1000  # Messages
+  query_latency_threshold_ms: 100
+  batch_size_optimization: true
+  auto_add_indexes: true
+
+# Infrastructure Automator Configuration
+infrastructure:
+  auto_scaling_enabled: true
+  scale_up_threshold: 0.80  # 80% utilization
+  scale_down_threshold: 0.30  # 30% utilization
+  scale_cooldown_seconds: 300  # 5 minutes between scaling
+  max_nodes: 10
+  min_nodes: 1
+  cost_optimization_enabled: true
+
+# Notification Configuration
+notifications:
+  enabled: true
+  channels:
+    - type: "log"
+      level: "INFO"
+
+    - type: "webhook"
+      url: "http://localhost:8000/api/v1/agent/notifications"
+      enabled: false
+
+  notify_on:
+    - "critical_action"
+    - "action_failure"
+    - "goal_achieved"
+    - "anomaly_detected"
+
+# API Configuration
+api:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8001
+  endpoints:
+    - "/agent/status"
+    - "/agent/actions/recent"
+    - "/agent/goals"
+    - "/agent/stats"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  file: "/var/log/prime-spark/agent.log"
+  rotation:
+    max_size_mb: 100
+    max_files: 5

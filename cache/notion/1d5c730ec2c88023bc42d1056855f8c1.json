@@ -1,0 +1,161 @@
+{
+  "object": "page",
+  "id": "1d5c730e-c2c8-8023-bc42-d1056855f8c1",
+  "created_time": "2025-04-14T11:04:00.000Z",
+  "last_edited_time": "2025-11-07T20:23:00.000Z",
+  "created_by": {
+    "object": "user",
+    "id": "1d2d872b-594c-8127-89c5-000262ac29ef"
+  },
+  "last_edited_by": {
+    "object": "user",
+    "id": "1d2d872b-594c-8127-89c5-000262ac29ef"
+  },
+  "cover": {
+    "type": "external",
+    "external": {
+      "url": "https://www.notion.so/images/page-cover/woodcuts_8.jpg"
+    }
+  },
+  "icon": {
+    "type": "emoji",
+    "emoji": "\ud83d\udd4d"
+  },
+  "parent": {
+    "type": "database_id",
+    "database_id": "1d2c730e-c2c8-803a-ad3f-ce52bf0dddd1"
+  },
+  "archived": false,
+  "in_trash": false,
+  "is_locked": false,
+  "properties": {
+    "Tags": {
+      "id": "%3Ckwj",
+      "type": "multi_select",
+      "multi_select": [
+        {
+          "id": "14d4ed7e-bb81-4983-98f1-bc3cc72b2220",
+          "name": "Onboarding",
+          "color": "blue"
+        }
+      ]
+    },
+    "Spark prime data base": {
+      "id": "ARbC",
+      "type": "rich_text",
+      "rich_text": []
+    },
+    "Created time": {
+      "id": "HqX%3F",
+      "type": "created_time",
+      "created_time": "2025-04-14T11:04:00.000Z"
+    },
+    "Last edited time": {
+      "id": "OJYA",
+      "type": "last_edited_time",
+      "last_edited_time": "2025-11-07T20:23:00.000Z"
+    },
+    "AI custom autofill": {
+      "id": "PvuA",
+      "type": "rich_text",
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "[SITE MAP SUMMARY]",
+            "link": null
+          },
+          "annotations": {
+            "bold": true,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "[SITE MAP SUMMARY]",
+          "href": null
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "\nThis site map outlines the core components and operational structures of Prime Spark AI, including internal operations, core AI roles, and tactical tasks. Each section provides a brief overview of the functions and responsibilities within the organization to ensure clarity and alignment in our mission and goals.",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "\nThis site map outlines the core components and operational structures of Prime Spark AI, including internal operations, core AI roles, and tactical tasks. Each section provides a brief overview of the functions and responsibilities within the organization to ensure clarity and alignment in our mission and goals.",
+          "href": null
+        }
+      ]
+    },
+    "Database ": {
+      "id": "eVTS",
+      "type": "rich_text",
+      "rich_text": []
+    },
+    "Verification": {
+      "id": "fpVq",
+      "type": "verification",
+      "verification": {
+        "state": "unverified",
+        "verified_by": null,
+        "date": null
+      }
+    },
+    "Google Drive File": {
+      "id": "~%3BMq",
+      "type": "relation",
+      "relation": [],
+      "has_more": false
+    },
+    "Page": {
+      "id": "title",
+      "type": "title",
+      "title": [
+        {
+          "type": "text",
+          "text": {
+            "content": "Prime Spark AI - Site Map",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "Prime Spark AI - Site Map",
+          "href": null
+        }
+      ]
+    },
+    "Owner": {
+      "id": "notion%3A%2F%2Fwiki%2Fowner_property",
+      "type": "people",
+      "people": [
+        {
+          "object": "user",
+          "id": "1d2d872b-594c-8127-89c5-000262ac29ef",
+          "name": "Jup ",
+          "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocKAn5iM-TU6LC1C2m80PcVRdg03Q-X6VTbY-e45h3KP6TLAoCs=s100",
+          "type": "person",
+          "person": {
+            "email": "theprimesparkai@gmail.com"
+          }
+        }
+      ]
+    }
+  },
+  "url": "https://www.notion.so/Prime-Spark-AI-Site-Map-1d5c730ec2c88023bc42d1056855f8c1",
+  "public_url": null,
+  "request_id": "be9b9d8f-6cf8-4285-b924-4197c75b3111"
+}

@@ -72,7 +72,7 @@ class RollbackManager:
 
         # Initialize logging if available
         try:
-            from logging import ChangeLogger, ChangeType
+            from app_logging import ChangeLogger, ChangeType
             self.logger = ChangeLogger(agent_id="rollback-manager")
             self.logging_enabled = True
         except ImportError:

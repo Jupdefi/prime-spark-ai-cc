@@ -1,0 +1,70 @@
+# Prime Spark N8N Integration Hub - Docker Compose
+
+version: '3.8'
+
+services:
+  n8n-hub:
+    container_name: prime-spark-n8n-hub
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      # N8N Configuration
+      - N8N_API_URL=${N8N_API_URL:-https://n8n.example.com/api/v1}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://n8n.example.com/webhook}
+      - N8N_API_KEY=${N8N_API_KEY}
+      - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET:-your-webhook-secret}
+
+      # Prime Spark Agents
+      - PULSE_API_URL=http://host.docker.internal:8001
+      - AI_BRIDGE_API_URL=http://host.docker.internal:8002
+      - MOBILE_API_URL=http://host.docker.internal:8003
+
+      # Redis Configuration
+      - REDIS_HOST=n8n-redis
+      - REDIS_PORT=6379
+      - REDIS_DB=3
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+      # Hub Configuration
+      - HUB_API_KEY=${HUB_API_KEY:-prime-spark-n8n-key}
+      - CACHE_TTL=3600
+      - MAX_CONCURRENT_WORKFLOWS=10
+      - WORKFLOW_TIMEOUT=60
+      - RATE_LIMIT_PER_MINUTE=100
+
+    depends_on:
+      - n8n-redis
+    networks:
+      - prime-spark
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  n8n-redis:
+    container_name: prime-spark-n8n-redis
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - n8n-redis-data:/data
+    networks:
+      - prime-spark
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  n8n-redis-data:
+    driver: local
+
+networks:
+  prime-spark:
+    driver: bridge

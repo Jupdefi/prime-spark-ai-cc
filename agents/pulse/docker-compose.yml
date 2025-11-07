@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  pulse-agent:
+    build: .
+    container_name: pulse-agent
+    ports:
+      - "8001:8001"
+    environment:
+      - PRIMECORE1_IP=${PRIMECORE1_IP}
+      - PRIMECORE1_PORT=${PRIMECORE1_PORT}
+      - PRIMECORE2_IP=${PRIMECORE2_IP}
+      - PRIMECORE2_PORT=${PRIMECORE2_PORT}
+      - PRIMECORE3_IP=${PRIMECORE3_IP}
+      - PRIMECORE3_PORT=${PRIMECORE3_PORT}
+      - PRIMECORE4_IP=${PRIMECORE4_IP}
+      - PRIMECORE4_PORT=${PRIMECORE4_PORT}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ../../../logs:/home/pironman5/prime-spark-ai/logs
+      - /sys/class/thermal:/sys/class/thermal:ro
+      - /proc:/host/proc:ro
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - prime-spark
+
+  redis:
+    image: redis:7-alpine
+    container_name: pulse-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - prime-spark
+
+  # Prometheus for metrics collection (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pulse-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - prime-spark
+    profiles:
+      - monitoring
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pulse-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - prime-spark
+    profiles:
+      - monitoring
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  prime-spark:
+    driver: bridge

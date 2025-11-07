@@ -1,0 +1,155 @@
+{
+  "object": "page",
+  "id": "2a3c730e-c2c8-80ba-9506-d96546d66462",
+  "created_time": "2025-11-06T14:16:00.000Z",
+  "last_edited_time": "2025-11-06T14:16:00.000Z",
+  "created_by": {
+    "object": "user",
+    "id": "1d2d872b-594c-8127-89c5-000262ac29ef"
+  },
+  "last_edited_by": {
+    "object": "user",
+    "id": "1d2d872b-594c-8127-89c5-000262ac29ef"
+  },
+  "cover": {
+    "type": "external",
+    "external": {
+      "url": "https://www.notion.so/images/page-cover/woodcuts_8.jpg"
+    }
+  },
+  "icon": {
+    "type": "emoji",
+    "emoji": "\ud83d\udd4d"
+  },
+  "parent": {
+    "type": "page_id",
+    "page_id": "1d5c730e-c2c8-8023-bc42-d1056855f8c1"
+  },
+  "archived": false,
+  "in_trash": false,
+  "is_locked": false,
+  "properties": {
+    "Tags": {
+      "id": "%3Ckwj",
+      "type": "multi_select",
+      "multi_select": []
+    },
+    "Spark prime data base": {
+      "id": "ARbC",
+      "type": "rich_text",
+      "rich_text": []
+    },
+    "Created time": {
+      "id": "HqX%3F",
+      "type": "created_time",
+      "created_time": "2025-11-06T14:16:00.000Z"
+    },
+    "Last edited time": {
+      "id": "OJYA",
+      "type": "last_edited_time",
+      "last_edited_time": "2025-11-06T14:16:00.000Z"
+    },
+    "AI custom autofill": {
+      "id": "PvuA",
+      "type": "rich_text",
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "[SITE MAP SUMMARY]",
+            "link": null
+          },
+          "annotations": {
+            "bold": true,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "[SITE MAP SUMMARY]",
+          "href": null
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "\nThis site map outlines the core components and operational structures of Prime Spark AI, including internal operations, core AI roles, and tactical tasks. Each section provides a brief overview of the functions and responsibilities within the organization to ensure clarity and alignment in our mission and goals.",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "\nThis site map outlines the core components and operational structures of Prime Spark AI, including internal operations, core AI roles, and tactical tasks. Each section provides a brief overview of the functions and responsibilities within the organization to ensure clarity and alignment in our mission and goals.",
+          "href": null
+        }
+      ]
+    },
+    "Database ": {
+      "id": "eVTS",
+      "type": "rich_text",
+      "rich_text": []
+    },
+    "Verification": {
+      "id": "fpVq",
+      "type": "verification",
+      "verification": {
+        "state": "unverified",
+        "verified_by": null,
+        "date": null
+      }
+    },
+    "Google Drive File": {
+      "id": "~%3BMq",
+      "type": "relation",
+      "relation": [],
+      "has_more": false
+    },
+    "Page": {
+      "id": "title",
+      "type": "title",
+      "title": [
+        {
+          "type": "text",
+          "text": {
+            "content": "Prime Spark AI - Site Map (1)",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "Prime Spark AI - Site Map (1)",
+          "href": null
+        }
+      ]
+    },
+    "Owner": {
+      "id": "notion%3A%2F%2Fwiki%2Fowner_property",
+      "type": "people",
+      "people": [
+        {
+          "object": "user",
+          "id": "1d2d872b-594c-8127-89c5-000262ac29ef",
+          "name": "Jup ",
+          "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocKAn5iM-TU6LC1C2m80PcVRdg03Q-X6VTbY-e45h3KP6TLAoCs=s100",
+          "type": "person",
+          "person": {
+            "email": "theprimesparkai@gmail.com"
+          }
+        }
+      ]
+    }
+  },
+  "url": "https://www.notion.so/Prime-Spark-AI-Site-Map-1-2a3c730ec2c880ba9506d96546d66462",
+  "public_url": null,
+  "request_id": "07c6096f-864f-4a4d-8ebc-291d35914173"
+}

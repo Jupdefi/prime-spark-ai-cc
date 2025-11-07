@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Backend API
+  mobile-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: prime-spark-mobile-api
+    ports:
+      - "8003:8003"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - PULSE_URL=http://host.docker.internal:8001
+      - AI_BRIDGE_URL=http://host.docker.internal:8002
+    volumes:
+      - ../../logs:/app/logs
+      - ../../engineering_workspace:/app/workspace
+    restart: unless-stopped
+    networks:
+      - prime-spark
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Frontend (React)
+  mobile-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: prime-spark-mobile-frontend
+    ports:
+      - "3001:80"
+    environment:
+      - VITE_API_URL=http://localhost:8003
+    depends_on:
+      - mobile-api
+    restart: unless-stopped
+    networks:
+      - prime-spark
+
+networks:
+  prime-spark:
+    driver: bridge
