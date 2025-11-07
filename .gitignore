@@ -99,3 +99,40 @@ grafana-data/
 # Rollback backups
 rollback/backups/
 *.tar.gz
+
+# Consciousness state (runtime data)
+consciousness_state/*.json
+!consciousness_state/.gitkeep
+
+# Voice recordings (large files)
+voice_interface/recordings/
+recordings/
+*.wav
+*.mp3
+*.ogg
+*.flac
+
+# AI Models (too large for git)
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.pb
+models/*.bin
+weights/
+checkpoints/
+
+# Hailo models
+*.hef
+
+# Whisper models (large)
+*.whisper
+
+# Piper voices (large)
+voices/
+
+# Notion cache
+.notion_cache/
+notion_export/
+
+# N8N workflows with credentials
+n8n_integration/workflows/*credentials*.json
